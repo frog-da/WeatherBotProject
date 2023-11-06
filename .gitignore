@@ -3,6 +3,8 @@
 *.log
 *~
 
+application.conf
+
 # sbt specific
 dist/*
 target/
