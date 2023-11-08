@@ -1,6 +1,5 @@
 package bot.integration
 
-
 import cats.effect._
 import cats.implicits._
 import cats.Parallel
@@ -11,11 +10,15 @@ import telegramium.bots._
 import telegramium.bots.high.implicits.methodOps
 import telegramium.bots.high.{Api, LongPollBot, Methods}
 
+import microservice.WeatherMicroservice
 
+class TelegramGate[F[_]](botApi: Api[F], weatherApi: String)(implicit
+  asyncF: Async[F],
+  parallel: Parallel[F],
+  lifted: LiftIO[F]
+) extends LongPollBot[F](botApi) {
 
-class TelegramGate[F[_]](api: Api[F])(implicit asyncF: Async[F], parallel: Parallel[F]) extends LongPollBot[F](api) {
-
-   override def onMessage(message: Message): F[Unit] =
+  override def onMessage(message: Message): F[Unit] =
     message.text match {
       case Some("/start") =>
         sendGreetingMessage(message)
@@ -30,29 +33,48 @@ class TelegramGate[F[_]](api: Api[F])(implicit asyncF: Async[F], parallel: Paral
       case _ =>
         handleUnknownCommand(message)
     }
-    private def sendGreetingMessage(message: Message): F[Unit] =
-    Methods.sendMessage(
-      chatId = ChatIntId(message.chat.id),
-      text = "Welcome to the Weather Bot! To get weather information, use the /weather command followed by a city name."
-    ).exec(api).void
-    
-    private def handleWeatherCommand(message: Message): F[Unit] =
-    Methods.sendMessage(
-      chatId = ChatIntId(message.chat.id),
-      text = "Please specify a city name after /weather. For example: /weather Moscow"
-    ).exec(api).void
-
-    private def handleWeatherInfoRequest(message: Message, city: String): F[Unit] =
-        Methods.sendMessage(
+  private def sendGreetingMessage(message: Message): F[Unit] =
+    Methods
+      .sendMessage(
         chatId = ChatIntId(message.chat.id),
-        text = s"Some weather information for $city"
-        ).exec(api).void
-        // TODO: Implement logic to fetch and provide weather information for the specified city.
+        text =
+          "Welcome to the Weather Bot! To get weather information, use the /weather command followed by a city name."
+      )
+      .exec(botApi)
+      .void
 
-    private def handleUnknownCommand(message: Message): F[Unit] =
-        Methods.sendMessage(
+  private def handleWeatherCommand(message: Message): F[Unit] =
+    Methods
+      .sendMessage(
+        chatId = ChatIntId(message.chat.id),
+        text = "Please specify a city name after /weather. For example: /weather Moscow"
+      )
+      .exec(botApi)
+      .void
+
+  private def handleWeatherInfoRequest(message: Message, city: String): F[Unit] =
+    LiftIO[F]
+      .liftIO(
+        WeatherMicroservice
+          .getWeather(city, weatherApi)
+      )
+      .flatMap(weatherInfo =>
+        Methods
+          .sendMessage(
+            chatId = ChatIntId(message.chat.id),
+            text = s"Weather information for $city: $weatherInfo"
+          )
+          .exec(botApi)
+          .void
+      )
+
+  private def handleUnknownCommand(message: Message): F[Unit] =
+    Methods
+      .sendMessage(
         chatId = ChatIntId(message.chat.id),
         text = "I don't understand this command. Please use /weather followed by a city name."
-        ).exec(api).void
+      )
+      .exec(botApi)
+      .void
 
 }

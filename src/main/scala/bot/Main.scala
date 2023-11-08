@@ -24,20 +24,20 @@ object Main extends IOApp {
       error => log.error(s"Could not load config file: $error").as(ExitCode.Error),
       config =>
         log.info(s"loaded config: $config") >>
-        resources(config)
-          .use(httpClient => assembleAndLaunch(config, httpClient))
-          .as(ExitCode.Success)
-    ) 
-  }
-  
-  private def assembleAndLaunch(config: Config, httpClient: Client[F]): IO[Unit] = {
-    val client = Logger(logHeaders = false, logBody = false)(httpClient)
-    val api    = BotApi[F](client, s"https://api.telegram.org/bot${config.tgBotApiToken}")
-    for {
-      _ <- new TelegramGate[F](api).start().void
-    } yield ()
+          resources(config)
+            .use(httpClient => assembleAndLaunch(config, httpClient))
+            .as(ExitCode.Success)
+    )
   }
 
+  private def assembleAndLaunch(config: Config, httpClient: Client[F]): IO[Unit] = {
+    val client = Logger(logHeaders = false, logBody = false)(httpClient)
+    val botApi = BotApi[F](client, s"https://api.telegram.org/bot${config.tgBotApiToken}")
+    val weatherApi = config.weatherServiceApiToken
+    for {
+      _ <- new TelegramGate[F](botApi, weatherApi).start().void
+    } yield ()
+  }
 
   private def resources(config: Config): Resource[F, Client[F]] =
     BlazeClientBuilder[F]
