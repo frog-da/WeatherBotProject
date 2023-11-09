@@ -46,17 +46,25 @@ object Sys {
 }
 
 object WeatherMicroservice {
-  def getWeather(city: String, weatherApi: String): IO[WeatherResponse] = {
+  def getWeather(city: String, weatherApi: String): IO[Either[String, WeatherResponse]] = {
     IO.blocking({
       implicit val reader: upickle.default.Reader[WeatherResponse] = upickle.default.macroR
-      val json =
-        quickRequest
-          .get(
-            uri"https://api.openweathermap.org/data/2.5/weather?q=$city&appid=$weatherApi&units=metric&exclude=minutely,hourly,daily,alerts"
-          )
-          .send()
-          .body
-      read[WeatherResponse](json)
+      val response = quickRequest
+        .get(
+          uri"https://api.openweathermap.org/data/2.5/weather?q=$city&appid=$weatherApi&units=metric&exclude=minutely,hourly,daily,alerts"
+        )
+        .send()
+
+      if (response.isSuccess) {
+        try {
+          val json = response.body
+          Right(read[WeatherResponse](json))
+        } catch {
+          case e: Exception => Left(s"Error parsing weather data for $city: ${e.getMessage}")
+        }
+      } else {
+        Left(s"Failed to retrieve weather data for $city. Status code: ${response.code}")
+      }
     })
   }
 }
