@@ -32,6 +32,7 @@ libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.36"
 libraryDependencies += "io.circe" %% "circe-generic" % "0.14.0"
 libraryDependencies += "io.circe" %% "circe-parser" % "0.14.0"
 libraryDependencies += "com.softwaremill.sttp.client4" %% "core" % "4.0.0-M6"
+libraryDependencies += "com.lihaoyi" %% "upickle" % "3.1.3"
 // Here, `libraryDependencies` is a set of dependencies, and by using `+=`,
 // we're adding the scala-parser-combinators dependency to the set of dependencies
 // that sbt will go and fetch when it starts up.

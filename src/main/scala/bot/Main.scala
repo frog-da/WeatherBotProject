@@ -11,7 +11,6 @@ import org.http4s.client.Client
 import org.http4s.client.middleware.Logger
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import cats.effect.ExitCode
 import cats.effect.IOApp

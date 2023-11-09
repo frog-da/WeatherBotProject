@@ -62,7 +62,7 @@ class TelegramGate[F[_]](botApi: Api[F], weatherApi: String)(implicit
         Methods
           .sendMessage(
             chatId = ChatIntId(message.chat.id),
-            text = s"Weather information for $city: $weatherInfo"
+            text = weatherInfoToText(weatherInfo)
           )
           .exec(botApi)
           .void
@@ -76,5 +76,34 @@ class TelegramGate[F[_]](botApi: Api[F], weatherApi: String)(implicit
       )
       .exec(botApi)
       .void
+
+  private def weatherInfoToText(weatherInfo: microservice.WeatherResponse): String = {
+    val iconMap = Map(
+      "01d" -> "☀️",
+      "02d" -> "🌤️",
+      "03d" -> "☁️",
+      "04d" -> "☁️",
+      "09d" -> "🌧️",
+      "10d" -> "🌦️",
+      "11d" -> "⛈️",
+      "13d" -> "❄️",
+      "50d" -> "🌫️",
+      "01n" -> "🌙",
+      "02n" -> "🌤️",
+      "03n" -> "☁️",
+      "04n" -> "☁️",
+      "09n" -> "🌧️",
+      "10n" -> "🌦️",
+      "11n" -> "⛈️",
+      "13n" -> "❄️",
+      "50n" -> "🌫️"
+    )
+    s"Weather information for ${weatherInfo.name}:\n" +
+      s"\nTemperature: ${weatherInfo.main.temp} C° Feels like: ${weatherInfo.main.feels_like} C°\n" +
+      s"${weatherInfo.weather.head.main}: ${weatherInfo.weather.head.description} ${iconMap(weatherInfo.weather.head.icon)}\n" +
+      s"Wind speed: ${weatherInfo.wind.speed} m/s\n" +
+      s"Sunrise: ${new java.util.Date(weatherInfo.sys.sunrise * 1000)} \n" +
+      s"Sunset: ${new java.util.Date(weatherInfo.sys.sunset * 1000)}"
+  }
 
 }
