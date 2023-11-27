@@ -3,6 +3,9 @@ package microservice
 import cats.effect._
 import sttp.client4.quick._
 import upickle.default._
+import cats.syntax.all._
+import cats.ApplicativeThrow
+
 
 case class WeatherResponse(
   coord: Coord,
@@ -45,26 +48,31 @@ object Sys {
   implicit val reader: upickle.default.Reader[Sys] = upickle.default.macroR
 }
 
-object WeatherMicroservice {
-  def getWeather(city: String, weatherApi: String): IO[Either[String, WeatherResponse]] = {
-    IO.blocking({
-      implicit val reader: upickle.default.Reader[WeatherResponse] = upickle.default.macroR
-      val response = quickRequest
-        .get(
-          uri"https://api.openweathermap.org/data/2.5/weather?q=$city&appid=$weatherApi&units=metric&exclude=minutely,hourly,daily,alerts"
-        )
-        .send()
+trait WeatherMicroservice[F[_]] {
+  def getWeather(city: String, weatherApi: String): F[Either[String, WeatherResponse]]
+}
 
-      if (response.isSuccess) {
-        try {
-          val json = response.body
-          Right(read[WeatherResponse](json))
-        } catch {
-          case e: Exception => Left(s"Error parsing weather data for $city: ${e.getMessage}")
+object WeatherMicroservice {
+  def apply[F[_]: Sync: ApplicativeThrow]: WeatherMicroservice[F] = new WeatherMicroservice[F] {
+    override def getWeather(city: String, weatherApi: String): F[Either[String, WeatherResponse]] =
+      Sync[F].blocking {
+        implicit val reader: upickle.default.Reader[WeatherResponse] = upickle.default.macroR
+        val response = quickRequest
+          .get(
+            uri"https://api.openweathermap.org/data/2.5/weather?q=$city&appid=$weatherApi&units=metric&exclude=minutely,hourly,daily,alerts"
+          )
+          .send()
+
+        if (response.isSuccess) {
+          try {
+            val json = response.body
+            Right(read[WeatherResponse](json))
+          } catch {
+            case e: Exception => Left(s"Error parsing weather data for $city: ${e.getMessage}")
+          }
+        } else {
+          Left(s"Failed to retrieve weather data for $city. Status code: ${response.code}")
         }
-      } else {
-        Left(s"Failed to retrieve weather data for $city. Status code: ${response.code}")
       }
-    })
   }
 }

@@ -2,7 +2,15 @@ package bot.integration
 
 import microservice.WeatherMicroservice
 
-object Messages {
+trait MessagesService {
+  def weatherInfoToText(weatherInfo: microservice.WeatherResponse): String
+  def greetingMessage: String
+  def weatherCommandMessage: String
+  def unknownCommandMessage: String
+  def errorFetchingWeatherMessage(city: String): String
+}
+
+object Messages extends MessagesService {
   def weatherInfoToText(weatherInfo: microservice.WeatherResponse): String = {
     val iconMap = Map(
       "01d" -> "☀️",
@@ -31,20 +39,19 @@ object Messages {
       s"Sunrise: ${new java.util.Date(weatherInfo.sys.sunrise * 1000)} \n" +
       s"Sunset: ${new java.util.Date(weatherInfo.sys.sunset * 1000)}"
   }
-
-  def GreetingMessage: String = {
+  def greetingMessage: String = {
     s"Welcome to the Weather Bot! To get weather information, use the /weather command followed by a city name"
   }
 
-  def WeatherCommandMessage: String = {
+  def weatherCommandMessage: String = {
     s"Please specify a city name after /weather. For example: /weather Moscow"
   }
 
-  def UnknownCommandMessage: String = {
+  def unknownCommandMessage: String = {
     s"I don't understand this command. Please use /weather followed by a city name"
   }
 
-  def ErrorFetchingWeatherMessage(city: String): String = {
+  def errorFetchingWeatherMessage(city: String): String = {
     s"Error fetching weather information for $city.\nPlease try again with a valid city name"
   }
 }

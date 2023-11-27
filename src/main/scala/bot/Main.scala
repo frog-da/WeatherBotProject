@@ -6,6 +6,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import telegramium.bots.high.{Api, BotApi, LongPollBot}
 import bot.config.Config
 import bot.integration.TelegramGate
+import microservice.WeatherMicroservice
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client.Client
 import org.http4s.client.middleware.Logger
@@ -16,7 +17,6 @@ import cats.effect.ExitCode
 import cats.effect.IOApp
 
 object Main extends IOApp {
-  type F[+T] = IO[T]
 
   def run(args: List[String]): IO[ExitCode] = {
     Config.load.fold(
@@ -29,20 +29,21 @@ object Main extends IOApp {
     )
   }
 
-  private def assembleAndLaunch(config: Config, httpClient: Client[F]): IO[Unit] = {
+  private def assembleAndLaunch(config: Config, httpClient: Client[IO]): IO[Unit] = {
     val client = Logger(logHeaders = false, logBody = false)(httpClient)
-    val botApi = BotApi[F](client, s"https://api.telegram.org/bot${config.tgBotApiToken}")
+    val botApi = BotApi[IO](client, s"https://api.telegram.org/bot${config.tgBotApiToken}")
     val weatherApi = config.weatherServiceApiToken
+    val weatherMicroservice = WeatherMicroservice[IO] // Create an instance of WeatherMicroservice
     for {
-      _ <- new TelegramGate[F](botApi, weatherApi).start().void
+      _ <- new TelegramGate[IO](botApi, weatherApi, weatherMicroservice).start().void
     } yield ()
   }
 
-  private def resources(config: Config): Resource[F, Client[F]] =
-    BlazeClientBuilder[F]
+  private def resources(config: Config): Resource[IO, Client[IO]] =
+    BlazeClientBuilder[IO]
       .withResponseHeaderTimeout(FiniteDuration(telegramResponseWaitTime, TimeUnit.SECONDS))
       .resource
 
   private val telegramResponseWaitTime = 60L
-  private val log = Slf4jLogger.getLoggerFromName[F]("application")
+  private val log = Slf4jLogger.getLoggerFromName[IO]("application")
 }
