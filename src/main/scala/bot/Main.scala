@@ -33,10 +33,9 @@ object Main extends IOApp {
     val client = Logger(logHeaders = false, logBody = false)(httpClient)
     val botApi = BotApi[IO](client, s"https://api.telegram.org/bot${config.tgBotApiToken}")
     val weatherApi = config.weatherServiceApiToken
-    val weatherMicroservice = WeatherMicroservice[IO] // Create an instance of WeatherMicroservice
-    for {
-      _ <- new TelegramGate[IO](botApi, weatherApi, weatherMicroservice).start().void
-    } yield ()
+    val weatherMicroservice = WeatherMicroservice[IO]
+    new TelegramGate[IO](botApi, weatherApi, weatherMicroservice).start().void
+
   }
 
   private def resources(config: Config): Resource[IO, Client[IO]] =

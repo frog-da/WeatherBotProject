@@ -10,7 +10,11 @@ import telegramium.bots.high.{Api, LongPollBot, Methods}
 import microservice.WeatherMicroservice
 import Messages._
 
-class TelegramGate[F[_]: Async: Parallel](botApi: Api[F], weatherApi: String, weatherMicroservice: WeatherMicroservice[F]) extends LongPollBot[F](botApi) {
+class TelegramGate[F[_]: Async: Parallel](
+  botApi: Api[F],
+  weatherApi: String,
+  weatherMicroservice: WeatherMicroservice[F]
+) extends LongPollBot[F](botApi) {
 
   override def onMessage(message: Message): F[Unit] =
     message.text match {
@@ -34,7 +38,8 @@ class TelegramGate[F[_]: Async: Parallel](botApi: Api[F], weatherApi: String, we
         chatId = ChatIntId(message.chat.id),
         text = Messages.greetingMessage
       )
-      .exec(botApi).void
+      .exec(botApi)
+      .void
 
   private def handleWeatherCommand(message: Message): F[Unit] =
     Methods
